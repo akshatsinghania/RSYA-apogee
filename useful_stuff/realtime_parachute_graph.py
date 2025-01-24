@@ -50,17 +50,14 @@ liftoff_time = None
 apogee_time = None
 max_altitude = -np.inf
 
-# Set up the figure with additional subplots for uncertainty and Kalman Gain
-fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 10))
+# Set up the figure with only one subplot for altitude
+fig, ax1 = plt.subplots(figsize=(10, 5))
 
 # Initialize the plots
 line_measured, = ax1.plot([], [], label='Measured Altitude', color='red')
 line_filtered_alt, = ax1.plot([], [], label='Filtered Altitude (Kalman)', color='blue', linestyle=':')
 liftoff_marker, = ax1.plot([], [], 'o', color='orange', label='Liftoff')
 apogee_marker, = ax1.plot([], [], 'o', color='purple', label='Apogee')
-line_velocity, = ax2.plot([], [], label='Filtered Velocity (Kalman)', color='green')
-line_uncertainty, = ax3.plot([], [], label='Uncertainty in Altitude/Kalman gain K[0]', color='purple')
-line_kalman_gain, = ax4.plot([], [], label='Kalman Gain K[1] velocity', color='orange')
 
 # Set plot limits and labels
 ax1.set_title("Altitude Over Time")
@@ -68,30 +65,12 @@ ax1.set_xlabel("Time (s)")
 ax1.set_ylabel("Altitude (m)")
 ax1.legend()
 
-ax2.set_title("Velocity Over Time")
-ax2.set_xlabel("Time (s)")
-ax2.set_ylabel("Velocity (m/s)")
-ax2.legend()
-
-ax3.set_title("Uncertainty in Altitude/Kalman gain K[0] Over Time")
-ax3.set_xlabel("Time (s)")
-ax3.set_ylabel("Uncertainty (m^2)")
-ax3.legend()
-
-ax4.set_title("Kalman Gain K[1] velocity Over Time")
-ax4.set_xlabel("Time (s)")
-ax4.set_ylabel("Kalman Gain")
-ax4.legend()
-
 def init():
     line_measured.set_data([], [])
     line_filtered_alt.set_data([], [])
     liftoff_marker.set_data([], [])
     apogee_marker.set_data([], [])
-    line_velocity.set_data([], [])
-    line_uncertainty.set_data([], [])
-    line_kalman_gain.set_data([], [])
-    return line_measured, line_filtered_alt, liftoff_marker, apogee_marker, line_velocity, line_uncertainty, line_kalman_gain
+    return line_measured, line_filtered_alt, liftoff_marker, apogee_marker
 
 # Define the number of simulation steps per animation frame
 steps_per_frame = 1  # Simulate 5 time steps for every frame
@@ -127,31 +106,14 @@ def update(frame):
 
     # Limit the length of the lists to match the time steps
     filtered_positions_trimmed = filtered_positions[:len(time_steps)]
-    filtered_velocities_trimmed = filtered_velocities[:len(time_steps)]
-    kalman_gains_trimmed = kalman_gains[:len(time_steps)]
-    uncertainty_values_trimmed = uncertainty_values[:len(time_steps)]
 
     # Update plot data
     line_measured.set_data(time_steps[:len(filtered_positions_trimmed)], measurements[:len(filtered_positions_trimmed)])
     line_filtered_alt.set_data(time_steps[:len(filtered_positions_trimmed)], filtered_positions_trimmed)
-    line_velocity.set_data(time_steps[:len(filtered_velocities_trimmed)], filtered_velocities_trimmed)
-    line_uncertainty.set_data(time_steps[:len(uncertainty_values_trimmed)], uncertainty_values_trimmed)
-    line_kalman_gain.set_data(time_steps[:len(kalman_gains_trimmed)], kalman_gains_trimmed)
 
     # Update axis limits for altitude plot
     ax1.set_xlim(0, time_steps[:len(filtered_positions_trimmed)][-1] + 1)  # Dynamic time axis
     ax1.set_ylim(min(measurements[:len(filtered_positions_trimmed)]) - 10, max(filtered_positions_trimmed) + 10)  # Dynamic altitude
-
-    # Update axis limits for velocity plot
-    ax2.set_xlim(0, time_steps[:len(filtered_velocities_trimmed)][-1] + 1)  # Dynamic time axis
-    ax2.set_ylim(min(filtered_velocities_trimmed) - 10, max(filtered_velocities_trimmed) + 10)  # Dynamic velocity
-
-    # Update axis limits for uncertainty and Kalman Gain plots
-    ax3.set_xlim(0, time_steps[:len(uncertainty_values_trimmed)][-1] + 1)
-    ax4.set_xlim(0, time_steps[:len(kalman_gains_trimmed)][-1] + 1)
-
-    ax3.set_ylim(min(uncertainty_values_trimmed)-.5, max(uncertainty_values_trimmed)+.5)  # Adjust uncertainty plot range
-    ax4.set_ylim(min(kalman_gains_trimmed)-.5, max(kalman_gains_trimmed)+.5)  # Adjust Kalman Gain plot range
 
     if liftoff_time:
         liftoff_index = np.where(time_steps == liftoff_time)[0][0]
@@ -161,7 +123,7 @@ def update(frame):
         apogee_index = np.where(time_steps == apogee_time)[0][0]
         apogee_marker.set_data([apogee_time], [filtered_positions_trimmed[apogee_index]])
 
-    return line_measured, line_filtered_alt, liftoff_marker, apogee_marker, line_velocity, line_uncertainty, line_kalman_gain
+    return line_measured, line_filtered_alt, liftoff_marker, apogee_marker
 
 # Animation interval settings
 simulation_speed = 1.0  # Adjust to speed up/slow down the simulation
