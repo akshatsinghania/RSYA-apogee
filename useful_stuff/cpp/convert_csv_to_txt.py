@@ -7,7 +7,7 @@ def convert_csv_to_txt(csv_file, txt_file):
 
         for row in csvreader:
             time = float(row[0])
-            altitude = float(row[1])
+            altitude = 5000-float(row[1])
             # Write to txt file in the format: <time> <acceleration> <pressure>
             # Assuming acceleration is ignored and using altitude as pressure
             txtfile.write(f"{time} -2.000 {altitude}\n")

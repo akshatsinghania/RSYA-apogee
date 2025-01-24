@@ -19,10 +19,12 @@ def main():
     gain = [0.010317, 0.010666, 0.004522]
     
     # Read data from CSV file
-    data=[]
+    data = []
     with open('altdata.csv', newline='') as csvfile:
         reader = csv.reader(csvfile)
-        data = list(reader)
+        for row in reader:
+            if not row[0].startswith('#'):  # Ignore lines starting with '#'
+                data.append(row)
 
     # Skip header row and convert remaining data to floats
     data = [[float(x) for x in row] for row in data[1:]]
@@ -55,6 +57,7 @@ def main():
 
     velocities = []  # List to store velocities
     times = []       # List to store corresponding times
+    apogee_time = None  # Variable to store the time of apogee detection
 
     for row in data[2:]:
         time,  pressure = map(float, row)
@@ -122,16 +125,21 @@ def main():
         else:
             if est[1] > 0:
                 print(f"Apogee detected at time: {time}")
+                apogee_time = time  # Store the time of apogee detection
                 sys.exit(0)
 
         last_time = time
 
     # Plot velocity over time
-    plt.plot(times, velocities)
+    plt.plot(times, velocities, label='Velocity')
+    if apogee_time is not None:
+        apogee_index = times.index(apogee_time)
+        plt.scatter(apogee_time, velocities[apogee_index], color='red', label='Apogee')
     plt.xlabel('Time')
     plt.ylabel('Velocity')
     plt.title('Velocity over Time')
     plt.grid(True)
+    plt.legend()
     plt.show()
 
 if __name__ == "__main__":

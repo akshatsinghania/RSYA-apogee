@@ -172,11 +172,11 @@ Output
     if (liftoff == 0) {
       if (est[1] < -5.0) {
         liftoff = 1;
-        printf("Liftoff detected at time: %f\n", time);
+        printf("%f\n", time);
       }
     } else {
       if (est[1] > 0) {
-        printf("Apogee detected at time: %f\n", time);
+        printf("%f\n", time);
         exit(0);
       }
     }
