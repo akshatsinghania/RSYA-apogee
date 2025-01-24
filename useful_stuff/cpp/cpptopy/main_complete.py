@@ -10,6 +10,7 @@ MODELVARIANCE = MODELSIGMA * MODELSIGMA
 
 def main():
     liftoff = 0
+    apogee=0
     est = [0.0, 0.0, 0.0]
     estp = [0.0, 0.0, 0.0]
     pest = [[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
@@ -58,10 +59,8 @@ def main():
     velocities = []  # List to store velocities
     times = []       # List to store corresponding times
     apogee_time = None  # Variable to store the time of apogee detection
-
-    altitudes = [row[0] for row in data]  # Assuming altitude is the first column
-    predicted_altitudes = [est[0] for _ in data]  # Placeholder for predicted altitudes
-    predicted_velocities = [est[1] for _ in data]  # Placeholder for predicted velocities
+    pressures = []  # List to store pressures
+    estimated_pressures = []  # List to store estimated pressures
 
     for row in data[2:]:
         time,  pressure = map(float, row)
@@ -119,6 +118,8 @@ def main():
         # Store time and velocity for plotting
         times.append(time)
         velocities.append(est[1])
+        pressures.append(pressure)  # Store pressure for plotting
+        estimated_pressures.append(est[0])  # Store estimated pressure for plotting
 
         # Output
         # print(f"Time: {time}, Pressure: {pressure}, Velocity: {est[1]}")
@@ -127,46 +128,38 @@ def main():
                 liftoff = 1
                 print(f"Liftoff detected at time: {time}")
         else:
-            if est[1] > 0:
+            if est[1] > 0 and not apogee:
                 print(f"Apogee detected at time: {time}")
                 apogee_time = time  # Store the time of apogee detection
-                sys.exit(0)
+                apogee = 1
+                # sys.exit(0)
 
         last_time = time
 
-    # Plot altitude and predicted altitude over time
-    plt.figure(figsize=(10, 8))
+    # Create subplots
+    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
 
-    plt.subplot(2, 1, 1)
-    plt.plot(times, altitudes, label='Altitude')
-    plt.plot(times, predicted_altitudes, label='Predicted Altitude', linestyle='--')
+    # Plot velocity over time
+    axs[0].plot(times, velocities, label='Velocity')
     if apogee_time is not None:
         apogee_index = times.index(apogee_time)
-        plt.scatter(apogee_time, altitudes[apogee_index], color='red', label='Apogee')
-    if liftoff:
-        liftoff_time = times[velocities.index(max(velocities))]  # Assuming liftoff is detected at max velocity
-        liftoff_index = times.index(liftoff_time)
-        plt.scatter(liftoff_time, altitudes[liftoff_index], color='green', label='Liftoff')
-    plt.xlabel('Time')
-    plt.ylabel('Altitude')
-    plt.title('Altitude and Predicted Altitude over Time')
-    plt.grid(True)
-    plt.legend()
+        axs[0].scatter(apogee_time, velocities[apogee_index], color='red', label='Apogee')
+    axs[0].set_xlabel('Time')
+    axs[0].set_ylabel('Velocity')
+    axs[0].set_title('Velocity over Time')
+    axs[0].grid(True)
+    axs[0].legend()
 
-    # Plot velocity and predicted velocity over time
-    plt.subplot(2, 1, 2)
-    plt.plot(times, velocities, label='Velocity')
-    plt.plot(times, predicted_velocities, label='Predicted Velocity', linestyle='--')
-    if apogee_time is not None:
-        plt.scatter(apogee_time, velocities[apogee_index], color='red', label='Apogee')
-    if liftoff:
-        plt.scatter(liftoff_time, velocities[liftoff_index], color='green', label='Liftoff')
-    plt.xlabel('Time')
-    plt.ylabel('Velocity')
-    plt.title('Velocity and Predicted Velocity over Time')
-    plt.grid(True)
-    plt.legend()
+    # Plot pressure and estimated pressure over time
+    axs[1].plot(times, pressures, label='Actual Pressure', color='orange')
+    axs[1].plot(times, estimated_pressures, label='Estimated Pressure', linestyle='--', color='blue')
+    axs[1].set_xlabel('Time')
+    axs[1].set_ylabel('Pressure')
+    axs[1].set_title('Pressure over Time')
+    axs[1].grid(True)
+    axs[1].legend()
 
+    # Adjust layout
     plt.tight_layout()
     plt.show()
 
