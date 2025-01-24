@@ -8,7 +8,7 @@ MODELSIGMA = 0.002
 MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
 MODELVARIANCE = MODELSIGMA * MODELSIGMA
 
-def main():
+def main(altitude=False):
     liftoff = 0
     liftoff_time = None
     apogee=0
@@ -18,45 +18,22 @@ def main():
     pestp = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     phi = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
     phit = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
-    gain = [0.010317, 0.010666, 0.01]
+    gain = [ 0.010317, 0.010666, 0.004522 ]
     
-    # Read data from CSV file
     data = []
     with open('data.csv', newline='') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             if not row[0].startswith('#'):  # Ignore lines starting with '#'
                 data.append(row)
-
-    # Skip header row and convert remaining data to floats
     data = [[float(x) for x in row] for row in data[1:]]
-    # Initialize
-    if not data:
-        sys.stderr.write("No data in file\n")
-        sys.exit(1)
-
-    time,  pressure = map(float, data[0])
-    est[0] = pressure
-    last_time = time
-
-    if len(data) < 2:
-        sys.stderr.write("Not enough data\n")
-        sys.exit(1)
 
     time,  pressure = map(float, data[1])
+    if altitude:
+        pressure=5000-pressure
     est[0] = pressure
-    dt = time - last_time
-
-    last_time = time
-
-    # Fill in state transition matrix and its transpose
-    phi[0][1] = dt
-    phi[1][2] = dt
-    phi[0][2] = dt * dt / 2.0
-    phit[1][0] = dt
-    phit[2][1] = dt
-    phit[2][0] = dt * dt / 2.0
-
+    last_time=0
+    
     velocities = []  # List to store velocities
     times = []       # List to store corresponding times
     apogee_time = None  # Variable to store the time of apogee detection
@@ -68,6 +45,15 @@ def main():
         if last_time >= time:
             sys.stderr.write("Time does not increase.\n")
             sys.exit(1)
+        
+        dt = time - last_time
+        last_time = time
+        phi[0][1] = dt
+        phi[1][2] = dt
+        phi[0][2] = dt * dt / 2.0
+        phit[1][0] = dt
+        phit[2][1] = dt
+        phit[2][0] = dt * dt / 2.0
 
         # Propagate state
         estp[0] = phi[0][0] * est[0] + phi[0][1] * est[1] + phi[0][2] * est[2]
@@ -157,10 +143,11 @@ def main():
 
     # Plot pressure and estimated pressure over time
     axs[1].plot(times, pressures, label='Actual Pressure', color='orange')
-    axs[1].plot(times, estimated_pressures, label='Estimated Pressure', linestyle='--', color='blue')
+    # axs[1].plot(times, estimated_pressures, label='Estimated Pressure', linestyle='--', color='blue')
     axs[1].set_xlabel('Time')
     axs[1].set_ylabel('Pressure')
     axs[1].set_title('Pressure over Time')
+
     axs[1].grid(True)
     axs[1].legend()
 
@@ -169,4 +156,4 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    main(altitude=True)
