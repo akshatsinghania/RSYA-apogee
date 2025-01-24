@@ -9,16 +9,21 @@ MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
 MODELVARIANCE = MODELSIGMA * MODELSIGMA
 
 def main(altitude=False):
+    params = [ 1.13027517e-03,  4.86945337e-03 ,-3.52958599e-05]
+    pest = [[params[0], 0, 0], [0, params[1], 0], [0, 0, params[2]]]
+    gain = [0, 0, 0]
+
+
     liftoff = 0
     liftoff_time = None
     apogee=0
     est = [0.0, 0.0, 0.0]
     estp = [0.0, 0.0, 0.0]
-    pest = [[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
+    # pest = [[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
     pestp = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     phi = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
     phit = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
-    gain = [ 0.010317, 0.010666, 0.004522 ]
+    # gain = [ 0.010317, 0.010666, 0.004522 ]
     
     data = []
     with open('data.csv', newline='') as csvfile:
