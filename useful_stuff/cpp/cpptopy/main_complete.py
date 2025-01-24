@@ -143,7 +143,10 @@ def main(altitude=False):
 
     # Plot pressure and estimated pressure over time
     axs[1].plot(times, pressures, label='Actual Pressure', color='orange')
-    # axs[1].plot(times, estimated_pressures, label='Estimated Pressure', linestyle='--', color='blue')
+    if apogee_time is not None:
+        axs[1].scatter(apogee_time, pressures[times.index(apogee_time)], color='red', label='Apogee')
+    if liftoff_time is not None:
+        axs[1].scatter(liftoff_time, pressures[times.index(liftoff_time)], color='green', label='Liftoff')
     axs[1].set_xlabel('Time')
     axs[1].set_ylabel('Pressure')
     axs[1].set_title('Pressure over Time')
