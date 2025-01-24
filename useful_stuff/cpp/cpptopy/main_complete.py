@@ -10,6 +10,7 @@ MODELVARIANCE = MODELSIGMA * MODELSIGMA
 
 def main():
     liftoff = 0
+    liftoff_time = None
     apogee=0
     est = [0.0, 0.0, 0.0]
     estp = [0.0, 0.0, 0.0]
@@ -126,6 +127,7 @@ def main():
         if liftoff == 0:
             if est[1] < -5.0:
                 liftoff = 1
+                liftoff_time=time
                 print(f"Liftoff detected at time: {time}")
         else:
             if est[1] > 0 and not apogee:
@@ -144,6 +146,9 @@ def main():
     if apogee_time is not None:
         apogee_index = times.index(apogee_time)
         axs[0].scatter(apogee_time, velocities[apogee_index], color='red', label='Apogee')
+    if liftoff_time is not None:
+        liftoff_index = times.index(liftoff_time)
+        axs[0].scatter(liftoff_time, velocities[liftoff_index], color='green', label='Liftoff')
     axs[0].set_xlabel('Time')
     axs[0].set_ylabel('Velocity')
     axs[0].set_title('Velocity over Time')
