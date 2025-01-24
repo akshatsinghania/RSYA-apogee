@@ -2,10 +2,7 @@ import math
 import csv
 import sys
 import matplotlib.pyplot as plt
-
-
-
-
+from scipy.optimize import minimize
 
 def main(pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]], gain=[ 0.010317, 0.010666, 0.004522 ],MEASUREMENTSIGMA = 0.44,MODELSIGMA = 0.002):
     MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
@@ -103,9 +100,64 @@ def main(pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]], gain=[ 0.010317, 0.
 
         last_time = time
 
-   
-params = [ 1.13027517e-03,  4.86945337e-03 ,-3.52958599e-05]
-pest = [[params[0], 0, 0], [0, params[1], 0], [0, 0, params[2]]]
-gain = [0, 0, 0]
-print(main(pest,gain))
+def objective_function(params, expected_value):
+    pest = [[params[0], 0, 0], [0, params[1], 0], [0, 0, params[2]]]
+    gain = [0, 0, 0]
+    result = main(pest, gain)
+    if result is None:
+        return float('inf')  # Penalize if no result
+    return abs(result - expected_value)
+
+from scipy.optimize import minimize, differential_evolution, dual_annealing, shgo
+import numpy as np
+
+def optimize_parameters(expected_value):
+    # Define the initial guess and bounds
+    initial_guess = [0.002, 0.004, 0.002]
+    bounds = [(0.001, 0.01), (0.001, 0.01), (0.001, 0.01)]
+
+    # Dictionary to store results from various optimization methods
+    optimization_results = {}
+
+    # L-BFGS-B
+    # lbfgs_result = minimize(objective_function, initial_guess, args=(expected_value,), bounds=bounds, method='L-BFGS-B')
+    # optimization_results["L-BFGS-B"] = lbfgs_result
+
+    # Nelder-Mead (does not support bounds, we clip the output)
+    nelder_mead_result = minimize(objective_function, initial_guess, args=(expected_value,), method='Nelder-Mead')
+    optimization_results["Nelder-Mead"] = nelder_mead_result
     
+
+    # # Differential Evolution
+    # differential_evolution_result = differential_evolution(objective_function, bounds, args=(expected_value,))
+    # optimization_results["Differential Evolution"] = differential_evolution_result
+
+    # # Simulated Annealing (Dual Annealing)
+    # dual_annealing_result = dual_annealing(objective_function, bounds, args=(expected_value,))
+    # optimization_results["Dual Annealing"] = dual_annealing_result
+
+    # # SHGO (Simplicial Homology Global Optimization)
+    # shgo_result = shgo(objective_function, bounds, args=(expected_value,))
+    # optimization_results["SHGO"] = shgo_result
+
+    # Compare results and find the best one
+    best_method = None
+    best_value = float('inf')
+    for method, result in optimization_results.items():
+        if result.fun < best_value:
+            best_value = result.fun
+            best_method = method
+
+    # Print summary
+    print("Optimization Results:")
+    for method, result in optimization_results.items():
+        print(f"Method: {method}, Optimal Parameters: {result.x if hasattr(result, 'x') else result}, Function Value: {result.fun}")
+
+    print(f"\nBest Method: {best_method}, Best Parameters: {optimization_results[best_method].x}, Closest Value: {best_value}")
+    return optimization_results[best_method].x
+
+
+# Example usage
+expected_apogee_time = 8  # Replace with your expected value
+optimal_params = optimize_parameters(expected_apogee_time)
+print(f"Optimal Parameters: {optimal_params}")
