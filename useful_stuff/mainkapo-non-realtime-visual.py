@@ -53,7 +53,9 @@ max_altitude = -np.inf
 
 # Initialize a variable to store the simple apogee time
 simple_apogee_time = None
+decrease_count = 0  # Counter to track consecutive decreases
 
+# Iterate through measurements to apply Kalman filter and detect simple apogee
 for i, measurement in enumerate(measurements):
     kf.predict()
     kf.update(measurement)
@@ -72,8 +74,15 @@ for i, measurement in enumerate(measurements):
         apogee_time = time_steps[i]
 
     # Simple real-time apogee detection
-    if i > 0 and measurements[i] < measurements[i - 1] and simple_apogee_time is None:
-        simple_apogee_time = time_steps[i - 1]
+    if i > 0:
+        if measurements[i] < measurements[i - 1]:
+            decrease_count += 1
+        else:
+            decrease_count = 0
+
+        # Confirm apogee if there are consecutive decreases
+        if decrease_count >= 3 and simple_apogee_time is None:
+            simple_apogee_time = time_steps[i - 2]  # Apogee likely occurred two steps back
 
 
 print(f"Liftoff Time: {liftoff_time} seconds")
@@ -93,7 +102,7 @@ plt.scatter(apogee_time, filtered_positions[time_steps.tolist().index(apogee_tim
 
 # Add simple apogee detection point
 if simple_apogee_time is not None:
-    plt.scatter(simple_apogee_time, filtered_positions[time_steps.tolist().index(simple_apogee_time)], color='cyan', label='Simple Apogee')
+    plt.scatter(simple_apogee_time, filtered_positions[time_steps.tolist().index(simple_apogee_time)], color='cyan', label='Very Simple Apogee')
 
 plt.title("Altitude Over Time")
 plt.xlabel("Time (s)")
@@ -103,6 +112,14 @@ plt.legend()
 
 plt.subplot(2, 1, 2)
 plt.plot(time_steps, filtered_velocities, label='Filtered Velocity (Kalman)', color='green')
+
+# Add apogee points to the velocity graph
+if apogee_time is not None:
+    plt.scatter(apogee_time, filtered_velocities[time_steps.tolist().index(apogee_time)], color='purple', label='Apogee (Kalman)')
+
+if simple_apogee_time is not None:
+    plt.scatter(simple_apogee_time, filtered_velocities[time_steps.tolist().index(simple_apogee_time)], color='cyan', label='Simple Apogee')
+
 plt.title("Velocity Over Time")
 plt.xlabel("Time (s)")
 plt.ylabel("Velocity (m/s)")
