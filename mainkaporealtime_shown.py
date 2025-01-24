@@ -101,26 +101,30 @@ def update(frame):
             max_altitude = state[0]
             apogee_time = time_steps[current_frame]
 
+    # Limit the length of the lists to match the time steps
+    filtered_positions_trimmed = filtered_positions[:len(time_steps)]
+    filtered_velocities_trimmed = filtered_velocities[:len(time_steps)]
+
     # Update plot data
-    line_measured.set_data(time_steps[:len(filtered_positions)], measurements[:len(filtered_positions)])
-    line_filtered_alt.set_data(time_steps[:len(filtered_positions)], filtered_positions)
-    line_velocity.set_data(time_steps[:len(filtered_velocities)], filtered_velocities)
+    line_measured.set_data(time_steps[:len(filtered_positions_trimmed)], measurements[:len(filtered_positions_trimmed)])
+    line_filtered_alt.set_data(time_steps[:len(filtered_positions_trimmed)], filtered_positions_trimmed)
+    line_velocity.set_data(time_steps[:len(filtered_velocities_trimmed)], filtered_velocities_trimmed)
 
     # Update axis limits for altitude plot
-    ax1.set_xlim(0, time_steps[:len(filtered_positions)][-1] + 1)  # Dynamic time axis
-    ax1.set_ylim(min(measurements[:len(filtered_positions)]) - 10, max(filtered_positions) + 10)  # Dynamic altitude
+    ax1.set_xlim(0, time_steps[:len(filtered_positions_trimmed)][-1] + 1)  # Dynamic time axis
+    ax1.set_ylim(min(measurements[:len(filtered_positions_trimmed)]) - 10, max(filtered_positions_trimmed) + 10)  # Dynamic altitude
 
     # Update axis limits for velocity plot
-    ax2.set_xlim(0, time_steps[:len(filtered_velocities)][-1] + 1)  # Dynamic time axis
-    ax2.set_ylim(min(filtered_velocities) - 10, max(filtered_velocities) + 10)  # Dynamic velocity
+    ax2.set_xlim(0, time_steps[:len(filtered_velocities_trimmed)][-1] + 1)  # Dynamic time axis
+    ax2.set_ylim(min(filtered_velocities_trimmed) - 10, max(filtered_velocities_trimmed) + 10)  # Dynamic velocity
 
     if liftoff_time:
         liftoff_index = np.where(time_steps == liftoff_time)[0][0]
-        liftoff_marker.set_data([liftoff_time], [filtered_positions[liftoff_index]])
+        liftoff_marker.set_data([liftoff_time], [filtered_positions_trimmed[liftoff_index]])
 
     if apogee_time:
         apogee_index = np.where(time_steps == apogee_time)[0][0]
-        apogee_marker.set_data([apogee_time], [filtered_positions[apogee_index]])
+        apogee_marker.set_data([apogee_time], [filtered_positions_trimmed[apogee_index]])
 
     return line_measured, line_filtered_alt, liftoff_marker, apogee_marker, line_velocity
 
