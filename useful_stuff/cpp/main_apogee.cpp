@@ -37,7 +37,8 @@ int main() {
   float pestp[3][3] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   float phi[3][3] = {1, 0, 0, 0, 1, 0, 0, 0, 1.0};
   float phit[3][3] = {1, 0, 0, 0, 1, 0, 0, 0, 1.0};
-  float gain[3] = {0.010317, 0.010666, 0.004522};
+  // float gain[3] = {0.010317, 0.010666, 0.004522};
+    float gain[3] = {10,10,10};
   float dt;
   float term[3][3];
   /* Initialize */

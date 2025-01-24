@@ -24,6 +24,8 @@ def run_command_and_store_output():
         print("An error occurred:", result.stderr)
         return None, None
 
+
+
 def plot_pressure_vs_time(takeoff, apogee):
     # Read data from file
     time = []
@@ -34,11 +36,11 @@ def plot_pressure_vs_time(takeoff, apogee):
             parts = line.split()
             if len(parts) == 3:
                 time.append(float(parts[0]))
-                pressure.append(float(parts[2]))
+                pressure.append(5000-float(parts[2]))
     
     # Plot the data
     plt.figure(figsize=(10, 6))
-    plt.plot(time, pressure, marker='o', label='Pressure')
+    plt.plot(time, pressure, label='Pressure')
     
     # Plot takeoff and apogee times
     if takeoff is not None:
