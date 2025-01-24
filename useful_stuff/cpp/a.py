@@ -20,7 +20,7 @@ def main():
     
     # Read data from CSV file
     data = []
-    with open('altdata.csv', newline='') as csvfile:
+    with open('data.csv', newline='') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             if not row[0].startswith('#'):  # Ignore lines starting with '#'

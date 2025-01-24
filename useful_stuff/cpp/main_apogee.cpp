@@ -37,8 +37,7 @@ int main() {
   float pestp[3][3] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
   float phi[3][3] = {1, 0, 0, 0, 1, 0, 0, 0, 1.0};
   float phit[3][3] = {1, 0, 0, 0, 1, 0, 0, 0, 1.0};
-  // float gain[3] = {0.010317, 0.010666, 0.004522};
-    float gain[3] = {10,10,10};
+  float gain[3] = {1, 1, 0.9522};
   float dt;
   float term[3][3];
   /* Initialize */
@@ -135,18 +134,18 @@ int main() {
     pestp[0][0] = pestp[0][0] + MODELVARIANCE;
 /*
 Calculate Kalman Gain
-*/
-#ifndef TEST
-    gain[0] = (phi[0][0] * pestp[0][0] + phi[0][1] * pestp[1][0] +
-               phi[0][2] * pestp[2][0]) /
-              (pestp[0][0] + MEASUREMENTVARIANCE);
-    gain[1] = (phi[1][0] * pestp[0][0] + phi[1][1] * pestp[1][0] +
-               phi[1][2] * pestp[2][0]) /
-              (pestp[0][0] + MEASUREMENTVARIANCE);
-    gain[2] = (phi[2][0] * pestp[0][0] + phi[2][1] * pestp[1][0] +
-               phi[2][2] * pestp[2][0]) /
-              (pestp[0][0] + MEASUREMENTVARIANCE);
-#endif
+// */
+
+//     gain[0] = (phi[0][0] * pestp[0][0] + phi[0][1] * pestp[1][0] +
+//                phi[0][2] * pestp[2][0]) /
+//               (pestp[0][0] + MEASUREMENTVARIANCE);
+//     gain[1] = (phi[1][0] * pestp[0][0] + phi[1][1] * pestp[1][0] +
+//                phi[1][2] * pestp[2][0]) /
+//               (pestp[0][0] + MEASUREMENTVARIANCE);
+//     gain[2] = (phi[2][0] * pestp[0][0] + phi[2][1] * pestp[1][0] +
+//                phi[2][2] * pestp[2][0]) /
+//               (pestp[0][0] + MEASUREMENTVARIANCE);
+
     /*
     Update state and state covariance
     */
