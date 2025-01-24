@@ -2,25 +2,14 @@ import math
 import csv
 import sys
 import matplotlib.pyplot as plt
+from scipy.optimize import minimize
+from scipy.optimize import dual_annealing, differential_evolution
+import numpy as np
 
-MEASUREMENTSIGMA = 0.44
-MODELSIGMA = 0.002
-MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
-MODELVARIANCE = MODELSIGMA * MODELSIGMA
-
-def main():
-    liftoff = 0
-    est = [0.0, 0.0, 0.0]
-    estp = [0.0, 0.0, 0.0]
-    pest = [[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
-    pestp = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-    phi = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
-    phit = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
-    gain = [0.010317, 0.010666, 0.004522]
-    
-    # Read data from CSV file
+# Load your dataset
+def load_data(filename):
     data = []
-    with open('data.csv', newline='') as csvfile:
+    with open(filename, newline='') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             if not row[0].startswith('#'):  # Ignore lines starting with '#'
@@ -28,44 +17,37 @@ def main():
 
     # Skip header row and convert remaining data to floats
     data = [[float(x) for x in row] for row in data[1:]]
-    # Initialize
-    if not data:
-        sys.stderr.write("No data in file\n")
-        sys.exit(1)
+    return data
 
-    time,  pressure = map(float, data[0])
+# Main Kalman filter function
+def run_kalman_filter(measurement_variance, model_variance, gain, pest, data):
+    liftoff = 0
+    apogee = 0
+    est = [0.0, 0.0, 0.0]
+    estp = [0.0, 0.0, 0.0]
+    pestp = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    phi = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
+    phit = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
+    
+    time, pressure = map(float, data[0])
     est[0] = pressure
     last_time = time
 
-    if len(data) < 2:
-        sys.stderr.write("Not enough data\n")
-        sys.exit(1)
+    for row in data[1:]:
+        time, pressure = map(float, row)
+        dt = time - last_time
+        if dt <= 0:
+            continue
 
-    time,  pressure = map(float, data[1])
-    est[0] = pressure
-    dt = time - last_time
+        # Update state transition matrix and transpose
+        phi[0][1] = dt
+        phi[1][2] = dt
+        phi[0][2] = dt * dt / 2.0
+        phit[1][0] = dt
+        phit[2][1] = dt
+        phit[2][0] = dt * dt / 2.0
 
-    last_time = time
-
-    # Fill in state transition matrix and its transpose
-    phi[0][1] = dt
-    phi[1][2] = dt
-    phi[0][2] = dt * dt / 2.0
-    phit[1][0] = dt
-    phit[2][1] = dt
-    phit[2][0] = dt * dt / 2.0
-
-    velocities = []  # List to store velocities
-    times = []       # List to store corresponding times
-    apogee_time = None  # Variable to store the time of apogee detection
-
-    for row in data[2:]:
-        time,  pressure = map(float, row)
-        if last_time >= time:
-            sys.stderr.write("Time does not increase.\n")
-            sys.exit(1)
-
-        # Propagate state
+         # Propagate state
         estp[0] = phi[0][0] * est[0] + phi[0][1] * est[1] + phi[0][2] * est[2]
         estp[1] = phi[1][0] * est[0] + phi[1][1] * est[1] + phi[1][2] * est[2]
         estp[2] = phi[2][0] * est[0] + phi[2][1] * est[1] + phi[2][2] * est[2]
@@ -112,35 +94,86 @@ def main():
         pest[2][1] = pestp[1][2] - gain[2] * pestp[1][0]
         pest[2][2] = pestp[2][2] - gain[2] * pestp[2][0]
 
-        # Store time and velocity for plotting
-        times.append(time)
-        velocities.append(est[1])
+        # Update covariance
+        for i in range(3):
+            for j in range(3):
+                pest[i][j] = pestp[i][j] - kalman_gain[i] * pestp[0][j]
 
-        # Output
-        # print(f"Time: {time}, Pressure: {pressure}, Velocity: {est[1]}")
-        if liftoff == 0:
-            if est[1] < -5.0:
-                liftoff = 1
-                print(f"Liftoff detected at time: {time}")
-        else:
-            if est[1] > 0:
-                print(f"Apogee detected at time: {time}")
-                apogee_time = time  # Store the time of apogee detection
-                sys.exit(0)
+        # Check for apogee detection
+        if liftoff == 0 and est[1] < -5.0:
+            liftoff = 1
+        elif liftoff == 1 and est[1] > 0 and not apogee:
+            return time  # Detected apogee time
 
         last_time = time
 
-    # Plot velocity over time
-    plt.plot(times, velocities, label='Velocity')
-    if apogee_time is not None:
-        apogee_index = times.index(apogee_time)
-        plt.scatter(apogee_time, velocities[apogee_index], color='red', label='Apogee')
-    plt.xlabel('Time')
-    plt.ylabel('Velocity')
-    plt.title('Velocity over Time')
-    plt.grid(True)
-    plt.legend()
-    plt.show()
+    return None  # If apogee not detected
+
+# Objective function for optimization
+def objective_function(params, actual_apogee, data):
+    # Extract the parameters
+    measurement_sigma, model_sigma, gain_0, gain_1, gain_2, pest_0, pest_1, pest_2, pest_3, pest_4, pest_5, pest_6, pest_7, pest_8 = params
+    
+    # Update parameters
+    measurement_variance = measurement_sigma ** 2
+    model_variance = model_sigma ** 2
+    gain = [gain_0, gain_1, gain_2]
+    
+    # Reconstruct pest matrix from the flattened parameters
+    pest = [
+        [pest_0, pest_1, pest_2],
+        [pest_3, pest_4, pest_5],
+        [pest_6, pest_7, pest_8]
+    ]
+    
+    # Run Kalman filter
+    detected_apogee = run_kalman_filter(measurement_variance, model_variance, gain, pest, data)
+    print(detected_apogee)
+    # Compute the error
+    if detected_apogee is None:
+        return float('inf')  # Penalize if no apogee is detected
+    return abs(detected_apogee - actual_apogee)
+
+# Main function to run optimization
+def main():
+    # Load data
+    data = load_data('data.csv')
+    
+    # Actual apogee time (replace with your known value)
+    actual_apogee_time = 8
+
+    # Initial guesses for parameters (flatten pest matrix)
+    initial_params = [0.44, 0.002, 0.01, 0.01, 0.01, 0.002, 0, 0, 0, 0.004, 0, 0, 0, 0.002]
+
+    # Bounds for parameters
+    bounds = [
+        (0.1, 1.0),  # MEASUREMENTSIGMA
+        (0.0001, 0.01),  # MODELSIGMA
+        (0.001, 0.1),  # gain[0]
+        (0.001, 0.1),  # gain[1]
+        (0.001, 0.1),  # gain[2]
+        (0, 0.01),  # pest[0,0]
+        (0, 0.01),  # pest[0,1]
+        (0, 0.01),  # pest[0,2]
+        (0, 0.01),  # pest[1,0]
+        (0, 0.01),  # pest[1,1]
+        (0, 0.01),  # pest[1,2]
+        (0, 0.01),  # pest[2,0]
+        (0, 0.01),  # pest[2,1]
+        (0, 0.01),  # pest[2,2]
+    ]
+
+    # Optimize parameters
+    result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='Nelder-Mead', bounds=bounds)
+
+    # Display results
+    optimized_params = result.x
+    print("Optimized Parameters:")
+    print(f"MEASUREMENTSIGMA: {optimized_params[0]}")
+    print(f"MODELSIGMA: {optimized_params[1]}")
+    print(f"gain: {optimized_params[2:]}")
+    print(f"pest matrix: {np.array(optimized_params[5:]).reshape(3, 3)}")
+    print(f"Optimization Result: {result}")
 
 if __name__ == "__main__":
     main()

@@ -45,11 +45,12 @@ filtered_positions = []
 filtered_velocities = []
 
 
-liftoff_time = None
-apogee_time = None
+liftoff_time = 0
+apogee_time = 0
 
 
-max_altitude = -np.inf
+liftoff_detected=False
+apogee_detected=False
 for i, measurement in enumerate(measurements):
     kf.predict()
     kf.update(measurement)
@@ -58,15 +59,16 @@ for i, measurement in enumerate(measurements):
     filtered_positions.append(state[0])
     filtered_velocities.append(state[1])
     
+  
 
-    if liftoff_time is None and state[0] > 0:
-        liftoff_time = time_steps[i]
-
-
-    if state[0] > max_altitude:
-        max_altitude = state[0]
-        apogee_time = time_steps[i]
-
+    if liftoff_time==0:
+        if state[1]<-5.0:
+            liftoff_detected=True
+    elif not apogee_detected:
+        if state[1]<0:
+            apogee_detected=True
+            apogee_time = time_steps[i]
+            print("apogee time",apogee_time)
 
 print(f"Liftoff Time: {liftoff_time} seconds")
 print(f"Apogee Time: {apogee_time} seconds")
