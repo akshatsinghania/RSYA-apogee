@@ -51,7 +51,7 @@ fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6))
 
 # Initialize the plots
 line_measured, = ax1.plot([], [], label='Measured Altitude', color='red')
-line_filtered_alt, = ax1.plot([], [], label='Filtered Altitude (Kalman)', color='blue')
+line_filtered_alt, = ax1.plot([], [], label='Filtered Altitude (Kalman)', color='blue',linestyle=':')
 liftoff_marker, = ax1.plot([], [], 'o', color='orange', label='Liftoff')
 apogee_marker, = ax1.plot([], [], 'o', color='purple', label='Apogee')
 line_velocity, = ax2.plot([], [], label='Filtered Velocity (Kalman)', color='green')
