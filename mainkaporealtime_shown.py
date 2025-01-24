@@ -21,7 +21,7 @@ class KalmanFilter:
         S = np.dot(H, np.dot(self.uncertainty, H.T)) + self.measurement_uncertainty
         K = np.dot(self.uncertainty, H.T) / S
         self.state = self.state + K * (measurement - np.dot(H, self.state))
-        self.uncertainty = self.uncertainty - np.dot(K, H) * self.uncertainty
+        self.uncertainty = self.uncertainty - np.outer(K, np.dot(H, self.uncertainty))
 
     def get_state(self):
         return self.state
@@ -54,7 +54,6 @@ line_measured, = ax1.plot([], [], label='Measured Altitude', color='red')
 line_filtered_alt, = ax1.plot([], [], label='Filtered Altitude (Kalman)', color='blue')
 liftoff_marker, = ax1.plot([], [], 'o', color='orange', label='Liftoff')
 apogee_marker, = ax1.plot([], [], 'o', color='purple', label='Apogee')
-
 line_velocity, = ax2.plot([], [], label='Filtered Velocity (Kalman)', color='green')
 
 # Set plot limits and labels
@@ -76,58 +75,61 @@ def init():
     line_velocity.set_data([], [])
     return line_measured, line_filtered_alt, liftoff_marker, apogee_marker, line_velocity
 
+# Define the number of simulation steps per animation frame
+steps_per_frame = 50  # Simulate 5 time steps for every frame
+
 def update(frame):
     global liftoff_time, apogee_time, max_altitude
 
-    # Process the next data point
-    measurement = measurements[frame]
-    kf.predict()
-    kf.update(measurement)
-    state = kf.get_state()
+    for _ in range(steps_per_frame):
+        current_frame = frame * steps_per_frame + _
+        if current_frame >= len(time_steps):  # Prevent going out of bounds
+            break
 
-    # Update the lists
-    filtered_positions.append(state[0])
-    filtered_velocities.append(state[1])
+        measurement = measurements[current_frame]
+        kf.predict()
+        kf.update(measurement)
+        state = kf.get_state()
 
-    # Log current state for debugging
-    print(f"Frame: {frame}, Time: {time_steps[frame]}, Measured: {measurement}, Filtered Altitude: {state[0]}, Velocity: {state[1]}")
+        filtered_positions.append(state[0])
+        filtered_velocities.append(state[1])
 
-    # Check for liftoff time
-    if liftoff_time is None and state[0] > 0:
-        liftoff_time = time_steps[frame]
+        if liftoff_time is None and state[0] > 0:
+            liftoff_time = time_steps[current_frame]
 
-    # Check for apogee
-    if state[0] > max_altitude:
-        max_altitude = state[0]
-        apogee_time = time_steps[frame]
+        if state[0] > max_altitude:
+            max_altitude = state[0]
+            apogee_time = time_steps[current_frame]
 
     # Update plot data
-    line_measured.set_data(time_steps[:frame+1], measurements[:frame+1])
-    line_filtered_alt.set_data(time_steps[:frame+1], filtered_positions)
-    liftoff_marker.set_data([liftoff_time], [filtered_positions[time_steps.tolist().index(liftoff_time)]])
-    apogee_marker.set_data([apogee_time], [filtered_positions[time_steps.tolist().index(apogee_time)]])
-    line_velocity.set_data(time_steps[:frame+1], filtered_velocities)
+    line_measured.set_data(time_steps[:len(filtered_positions)], measurements[:len(filtered_positions)])
+    line_filtered_alt.set_data(time_steps[:len(filtered_positions)], filtered_positions)
+    line_velocity.set_data(time_steps[:len(filtered_velocities)], filtered_velocities)
 
-    # Update axes limits dynamically
-    ax1.set_xlim(0, time_steps[:frame+1].max() + 1)
-    ax1.set_ylim(0, max(filtered_positions) + 1)
-    ax2.set_xlim(0, time_steps[:frame+1].max() + 1)
-    ax2.set_ylim(min(filtered_velocities) - 1, max(filtered_velocities) + 1)
+    # Update axis limits for altitude plot
+    ax1.set_xlim(0, time_steps[:len(filtered_positions)][-1] + 1)  # Dynamic time axis
+    ax1.set_ylim(min(measurements[:len(filtered_positions)]) - 10, max(filtered_positions) + 10)  # Dynamic altitude
+
+    # Update axis limits for velocity plot
+    ax2.set_xlim(0, time_steps[:len(filtered_velocities)][-1] + 1)  # Dynamic time axis
+    ax2.set_ylim(min(filtered_velocities) - 10, max(filtered_velocities) + 10)  # Dynamic velocity
+
+    if liftoff_time:
+        liftoff_index = np.where(time_steps == liftoff_time)[0][0]
+        liftoff_marker.set_data([liftoff_time], [filtered_positions[liftoff_index]])
+
+    if apogee_time:
+        apogee_index = np.where(time_steps == apogee_time)[0][0]
+        apogee_marker.set_data([apogee_time], [filtered_positions[apogee_index]])
 
     return line_measured, line_filtered_alt, liftoff_marker, apogee_marker, line_velocity
 
-# Define the simulation speed: simulation seconds per real-life second
-simulation_speed = 100000  # For example, 10 simulation seconds per real-life second
-
-# Calculate interval based on simulation_speed
-# interval = (real-life milliseconds per frame) = (simulation seconds per frame / simulation_speed) * 1000
-simulation_time_per_frame = time_steps[1] - time_steps[0]  # Time difference between consecutive steps
-interval = (simulation_time_per_frame / simulation_speed) * 1000
-print(interval)
+# Animation interval settings
+simulation_speed = 1.0  # Adjust to speed up/slow down the simulation
+interval = 100  # 100ms between frames
 
 # Create the animation
-ani = FuncAnimation(fig, update, frames=len(time_steps), init_func=init, blit=True, interval=interval)
-
+ani = FuncAnimation(fig, update, frames=(len(time_steps) // steps_per_frame), init_func=init, blit=True, interval=interval)
 
 plt.tight_layout()
 plt.show()
