@@ -3,7 +3,7 @@ import csv
 import sys
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-
+from scipy.optimize import dual_annealing,differential_evolution
 # Load your dataset
 def load_data(filename):
     data = []
@@ -95,6 +95,7 @@ def objective_function(params, actual_apogee, data):
     # Compute the error
     if detected_apogee is None:
         return float('inf')  # Penalize if no apogee is detected
+    print(detected_apogee)
     return abs(detected_apogee - actual_apogee)
 
 # Main function to run optimization
@@ -118,7 +119,21 @@ def main():
     ]
 
     # Optimize parameters
-    result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), bounds=bounds, method='L-BFGS-B')
+    result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='Nelder-Mead', bounds=bounds)
+    # result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='Powell', bounds=bounds)
+    # result = differential_evolution(objective_function, bounds, args=(actual_apogee_time, data))
+    # result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='trust-constr', bounds=bounds)
+    # result = dual_annealing(objective_function, bounds, args=(actual_apogee_time, data))
+    # result = dual_annealing(objective_function, bounds, args=(actual_apogee_time, data))
+    # result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='BFGS', bounds=bounds)
+
+
+
+
+
+
+
+
 
     # Display results
     optimized_params = result.x
