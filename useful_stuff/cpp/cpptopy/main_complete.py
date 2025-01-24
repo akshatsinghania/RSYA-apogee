@@ -59,6 +59,10 @@ def main():
     times = []       # List to store corresponding times
     apogee_time = None  # Variable to store the time of apogee detection
 
+    altitudes = [row[0] for row in data]  # Assuming altitude is the first column
+    predicted_altitudes = [est[0] for _ in data]  # Placeholder for predicted altitudes
+    predicted_velocities = [est[1] for _ in data]  # Placeholder for predicted velocities
+
     for row in data[2:]:
         time,  pressure = map(float, row)
         if last_time >= time:
@@ -130,16 +134,40 @@ def main():
 
         last_time = time
 
-    # Plot velocity over time
-    plt.plot(times, velocities, label='Velocity')
+    # Plot altitude and predicted altitude over time
+    plt.figure(figsize=(10, 8))
+
+    plt.subplot(2, 1, 1)
+    plt.plot(times, altitudes, label='Altitude')
+    plt.plot(times, predicted_altitudes, label='Predicted Altitude', linestyle='--')
     if apogee_time is not None:
         apogee_index = times.index(apogee_time)
-        plt.scatter(apogee_time, velocities[apogee_index], color='red', label='Apogee')
+        plt.scatter(apogee_time, altitudes[apogee_index], color='red', label='Apogee')
+    if liftoff:
+        liftoff_time = times[velocities.index(max(velocities))]  # Assuming liftoff is detected at max velocity
+        liftoff_index = times.index(liftoff_time)
+        plt.scatter(liftoff_time, altitudes[liftoff_index], color='green', label='Liftoff')
     plt.xlabel('Time')
-    plt.ylabel('Velocity')
-    plt.title('Velocity over Time')
+    plt.ylabel('Altitude')
+    plt.title('Altitude and Predicted Altitude over Time')
     plt.grid(True)
     plt.legend()
+
+    # Plot velocity and predicted velocity over time
+    plt.subplot(2, 1, 2)
+    plt.plot(times, velocities, label='Velocity')
+    plt.plot(times, predicted_velocities, label='Predicted Velocity', linestyle='--')
+    if apogee_time is not None:
+        plt.scatter(apogee_time, velocities[apogee_index], color='red', label='Apogee')
+    if liftoff:
+        plt.scatter(liftoff_time, velocities[liftoff_index], color='green', label='Liftoff')
+    plt.xlabel('Time')
+    plt.ylabel('Velocity')
+    plt.title('Velocity and Predicted Velocity over Time')
+    plt.grid(True)
+    plt.legend()
+
+    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":
