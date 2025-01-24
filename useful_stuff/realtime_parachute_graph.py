@@ -47,6 +47,8 @@ apogee_times = []
 liftoff_time = None
 apogee_time = None
 max_altitude = -np.inf
+stable_apogee_count = 0
+stability_threshold = 10  # Number of frames to consider apogee stable
 
 # Set up the figure for altitude plot and apogee time plot
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
@@ -79,10 +81,10 @@ def init():
     return line_measured, line_filtered_alt, liftoff_marker, apogee_marker, line_apogee_time
 
 # Define the number of simulation steps per animation frame
-steps_per_frame = 10  # Simulate 5 time steps for every frame
+steps_per_frame = 50  # Simulate 5 time steps for every frame
 
 def update(frame):
-    global liftoff_time, apogee_time, max_altitude
+    global liftoff_time, apogee_time, max_altitude, stable_apogee_count
 
     for _ in range(steps_per_frame):
         current_frame = frame * steps_per_frame + _
@@ -102,8 +104,15 @@ def update(frame):
         if state[0] > max_altitude:
             max_altitude = state[0]
             apogee_time = time_steps[current_frame]
+            stable_apogee_count = 0  # Reset stability count when a new apogee is found
+        else:
+            stable_apogee_count += 1
 
         apogee_times.append(apogee_time if apogee_time else 0)
+
+    # Check if apogee time is stable
+    if stable_apogee_count >= stability_threshold:
+        print(f"Apogee detected at time: {apogee_time}")
 
     # Limit the length of the lists to match the time steps
     filtered_positions_trimmed = filtered_positions[:len(time_steps)]
