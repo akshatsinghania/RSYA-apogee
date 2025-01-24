@@ -80,46 +80,78 @@ line_measurement_noise, = ax8.plot([], [], label='Measurement Noise', color='yel
 
 line_state_update_rate, = ax9.plot([], [], label='State Update Rate', color='pink')
 
-# Precompute axis limits before the animation
+# Precompute data for all plots
+def preprocess_data():
+    for i, measurement in enumerate(measurements):
+        kf.predict()
+        K = kf.update(measurement)  # Get Kalman Gain
+        state = kf.get_state()
+
+        filtered_positions.append(state[0])
+        filtered_velocities.append(state[1])
+        kalman_gains.append(K[1])  # Store Kalman Gain
+        uncertainty_values.append(kf.uncertainty[0, 0])  # Store Uncertainty in Altitude
+        innovation = measurement - np.dot(np.array([1, 0]), state)  # Calculate Innovation
+        innovation_values.append(innovation)
+        covariance_values.append(kf.uncertainty[0, 0])  # Store Error Covariance
+        process_noise_values.append(kf.process_uncertainty[0, 0])  # Process Noise
+        measurement_noise_values.append(kf.measurement_uncertainty)  # Measurement Noise
+        raw_positions.append(measurement)
+        
+        # Estimate velocity using np.gradient
+        if i >= 2:
+            raw_velocity = np.gradient(measurements[:i + 1])[-1]
+        else:
+            raw_velocity = 0
+        raw_velocities.append(raw_velocity)
+
+        if len(filtered_positions) > 1:
+            state_update_rate.append(abs(filtered_positions[-1] - filtered_positions[-2]))
+
+        # Track liftoff and apogee
+        if liftoff_time is None and state[0] > 0:
+            liftoff_time = time_steps[i]
+        if state[0] > max_altitude:
+            max_altitude = state[0]
+            apogee_time = time_steps[i]
+
+# Call preprocessing
+preprocess_data()
+
+# Adjust compute_axis_limits to use precomputed data
 def compute_axis_limits():
-    # Precompute min and max values for each plot
     min_time = np.min(time_steps)
     max_time = np.max(time_steps)
-
-    # Precompute y-axis limits for each graph
-    min_altitude = np.min(measurements)
-    max_altitude = np.max(measurements)
-    altitude_margin = (max_altitude - min_altitude) * 0.05  # 5% margin
     ax1.set_xlim(min_time, max_time)
-    ax1.set_ylim(min_altitude - altitude_margin, max_altitude + altitude_margin)
+    ax1.set_ylim(np.min(filtered_positions), np.max(filtered_positions))
 
-    # Filtered velocity (simple estimation here)
-    min_velocity = min(measurements)
-    max_velocity = max(measurements)
-    velocity_margin = (max_velocity - min_velocity) * 0.05  # 5% margin
     ax2.set_xlim(min_time, max_time)
-    ax2.set_ylim(min_velocity - velocity_margin, max_velocity + velocity_margin)
+    ax2.set_ylim(np.min(filtered_velocities), np.max(filtered_velocities))
 
-    # Other axis limits
     ax3.set_xlim(min_time, max_time)
+    ax3.set_ylim(0, np.max(uncertainty_values))
+
     ax4.set_xlim(min_time, max_time)
+    ax4.set_ylim(0, np.max(kalman_gains))
+
     ax5.set_xlim(min_time, max_time)
+    ax5.set_ylim(np.min(innovation_values), np.max(innovation_values))
+
     ax6.set_xlim(min_time, max_time)
+    ax6.set_ylim(0, np.max(covariance_values))
+
     ax7.set_xlim(min_time, max_time)
+    ax7.set_ylim(0, np.max(process_noise_values))
+
     ax8.set_xlim(min_time, max_time)
+    ax8.set_ylim(0, np.max(measurement_noise_values))
+
     ax9.set_xlim(min_time, max_time)
+    ax9.set_ylim(0, np.max(state_update_rate))
 
-    # Precompute y-limits for uncertainty, Kalman Gain, etc. by assuming possible ranges
-    ax3.set_ylim(0, 100)  # Example for uncertainty
-    ax4.set_ylim(0, 1)    # Example for Kalman Gain
-    ax5.set_ylim(-10, 10)  # Example for Innovation
-    ax6.set_ylim(0, 100)   # Example for Error Covariance
-    ax7.set_ylim(0, 10)    # Example for Process Noise
-    ax8.set_ylim(0, 10)    # Example for Measurement Noise
-    ax9.set_ylim(0, 1)     # Example for State Update Rate
-
-# Initialize the axes with the precomputed limits
+# Initialize axes
 compute_axis_limits()
+
 
 def init():
     line_measured.set_data([], [])
