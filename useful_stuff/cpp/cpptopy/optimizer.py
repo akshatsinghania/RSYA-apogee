@@ -3,7 +3,9 @@ import csv
 import sys
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
-from scipy.optimize import dual_annealing,differential_evolution
+from scipy.optimize import dual_annealing, differential_evolution
+import numpy as np
+
 # Load your dataset
 def load_data(filename):
     data = []
@@ -18,13 +20,11 @@ def load_data(filename):
     return data
 
 # Main Kalman filter function
-def run_kalman_filter(measurement_variance, model_variance, gain, data):
+def run_kalman_filter(measurement_variance, model_variance, gain, pest, data):
     liftoff = 0
-    liftoff_time = None
     apogee = 0
     est = [0.0, 0.0, 0.0]
     estp = [0.0, 0.0, 0.0]
-    pest = [[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
     pestp = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     phi = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
     phit = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
@@ -72,7 +72,6 @@ def run_kalman_filter(measurement_variance, model_variance, gain, data):
         # Check for apogee detection
         if liftoff == 0 and est[1] < -5.0:
             liftoff = 1
-            liftoff_time = time
         elif liftoff == 1 and est[1] > 0 and not apogee:
             return time  # Detected apogee time
 
@@ -82,20 +81,27 @@ def run_kalman_filter(measurement_variance, model_variance, gain, data):
 
 # Objective function for optimization
 def objective_function(params, actual_apogee, data):
-    measurement_sigma, model_sigma, gain_0, gain_1, gain_2 = params
+    # Extract the parameters
+    measurement_sigma, model_sigma, gain_0, gain_1, gain_2, pest_0, pest_1, pest_2, pest_3, pest_4, pest_5, pest_6, pest_7, pest_8 = params
     
     # Update parameters
     measurement_variance = measurement_sigma ** 2
     model_variance = model_sigma ** 2
     gain = [gain_0, gain_1, gain_2]
     
-    # Run Kalman filter
-    detected_apogee = run_kalman_filter(measurement_variance, model_variance, gain, data)
+    # Reconstruct pest matrix from the flattened parameters
+    pest = [
+        [pest_0, pest_1, pest_2],
+        [pest_3, pest_4, pest_5],
+        [pest_6, pest_7, pest_8]
+    ]
     
+    # Run Kalman filter
+    detected_apogee = run_kalman_filter(measurement_variance, model_variance, gain, pest, data)
+    print(detected_apogee)
     # Compute the error
     if detected_apogee is None:
         return float('inf')  # Penalize if no apogee is detected
-    print(detected_apogee)
     return abs(detected_apogee - actual_apogee)
 
 # Main function to run optimization
@@ -106,8 +112,8 @@ def main():
     # Actual apogee time (replace with your known value)
     actual_apogee_time = 8
 
-    # Initial guesses for parameters
-    initial_params = [0.44, 0.002, 0.01, 0.01, 0.01]
+    # Initial guesses for parameters (flatten pest matrix)
+    initial_params = [0.44, 0.002, 0.01, 0.01, 0.01, 0.002, 0, 0, 0, 0.004, 0, 0, 0, 0.002]
 
     # Bounds for parameters
     bounds = [
@@ -116,24 +122,19 @@ def main():
         (0.001, 0.1),  # gain[0]
         (0.001, 0.1),  # gain[1]
         (0.001, 0.1),  # gain[2]
+        (0, 0.01),  # pest[0,0]
+        (0, 0.01),  # pest[0,1]
+        (0, 0.01),  # pest[0,2]
+        (0, 0.01),  # pest[1,0]
+        (0, 0.01),  # pest[1,1]
+        (0, 0.01),  # pest[1,2]
+        (0, 0.01),  # pest[2,0]
+        (0, 0.01),  # pest[2,1]
+        (0, 0.01),  # pest[2,2]
     ]
 
     # Optimize parameters
     result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='Nelder-Mead', bounds=bounds)
-    # result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='Powell', bounds=bounds)
-    # result = differential_evolution(objective_function, bounds, args=(actual_apogee_time, data))
-    # result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='trust-constr', bounds=bounds)
-    # result = dual_annealing(objective_function, bounds, args=(actual_apogee_time, data))
-    # result = dual_annealing(objective_function, bounds, args=(actual_apogee_time, data))
-    # result = minimize(objective_function, initial_params, args=(actual_apogee_time, data), method='BFGS', bounds=bounds)
-
-
-
-
-
-
-
-
 
     # Display results
     optimized_params = result.x
@@ -141,6 +142,7 @@ def main():
     print(f"MEASUREMENTSIGMA: {optimized_params[0]}")
     print(f"MODELSIGMA: {optimized_params[1]}")
     print(f"gain: {optimized_params[2:]}")
+    print(f"pest matrix: {np.array(optimized_params[5:]).reshape(3, 3)}")
     print(f"Optimization Result: {result}")
 
 if __name__ == "__main__":
