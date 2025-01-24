@@ -1,0 +1,70 @@
+import numpy as np
+import pandas as pd
+
+# Constants
+MEASUREMENT_SIGMA = 0.44
+MODEL_SIGMA = 0.002
+MEASUREMENT_VARIANCE = MEASUREMENT_SIGMA ** 2
+MODEL_VARIANCE = MODEL_SIGMA ** 2
+
+def kalman_filter(data):
+    # Initial state
+    est = np.zeros(3)
+    pest = np.array([[0.002, 0, 0],
+                     [0, 0.004, 0],
+                     [0, 0, 0.002]])
+    
+    phi = np.eye(3)
+    phit = np.eye(3)
+    gain = np.zeros(3)
+    
+    liftoff_detected = False
+    last_time = data.iloc[0]['Time (s)']
+    est[0] = data.iloc[0]['Altitude (m)']  # Initial pressure
+
+    for i in range(1, len(data)):
+        time = data.iloc[i]['Time (s)']
+        pressure = data.iloc[i]['Altitude (m)']
+        dt = time - last_time
+        
+        # Update state transition matrix
+        phi[0][1] = dt
+        phi[1][2] = dt
+        phi[0][2] = dt * dt / 2.0
+        phit[1][0] = dt
+        phit[2][1] = dt
+        phit[2][0] = dt * dt / 2.0
+        
+        # Propagate state
+        estp = phi @ est
+        
+        # Propagate state covariance
+        term = phi @ pest
+        pestp = term @ phit
+        pestp[0][0] += MODEL_VARIANCE
+        
+        # Calculate Kalman Gain
+        gain = (phi[:, 0] @ pestp[:, 0]) / (pestp[0][0] + MEASUREMENT_VARIANCE)
+        
+        # Update state and state covariance
+        est = estp + gain * (pressure - estp[0])
+        pest = pestp - np.outer(gain, pestp[:, 0])
+        
+        # Event detection
+        if not liftoff_detected and est[1] < -5.0:
+            liftoff_detected = True
+            print(f"Liftoff detected at time: {time}")
+        
+        if liftoff_detected and est[1] > 0:
+            print(f"Apogee detected at time: {time}")
+            break
+        
+        last_time = time
+
+# Load the data from the CSV file
+data = pd.read_csv('altdata.csv', comment='#', header=None, names=['Time (s)', 'Altitude (m)'])
+
+# Display the first few rows of the data
+print(data.head())
+
+kalman_filter(data)
