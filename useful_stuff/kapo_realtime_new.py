@@ -29,7 +29,7 @@ class KalmanFilter:
         return self.state
 
 # Load the data
-data = pd.read_csv('altdata.csv', comment='#')
+data = pd.read_csv('data1.csv', comment='#')
 time_steps = data['time'].values
 measurements = data['altitude'].values
 
