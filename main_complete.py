@@ -8,8 +8,7 @@ MODELSIGMA = 0.002
 MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
 MODELVARIANCE = MODELSIGMA * MODELSIGMA
 
-def main(altitude=False):
-    MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
+def main():
     MODELVARIANCE = MODELSIGMA * MODELSIGMA
     liftoff = 0
     apogee=0
@@ -43,11 +42,11 @@ def main(altitude=False):
     phit[2][1] = dt
     phit[2][0] = dt * dt / 2.0
     
-    velocities = []  # List to store velocities
-    times = []       # List to store corresponding times
-    apogee_time = None  # Variable to store the time of apogee detection
-    pressures = []  # List to store pressures
-    estimated_pressures = []  # List to store estimated pressures
+    velocities = []  
+    times = []       
+    apogee_time = None  
+    pressures = []  
+    estimated_pressures = []
 
     for row in data:
         time,  pressure = map(float, row)
@@ -85,11 +84,6 @@ def main(altitude=False):
         pestp[2][2] = term[2][0] * phit[0][2] + term[2][1] * phit[1][2] + term[2][2] * phit[2][2]
         pestp[0][0] += MODELVARIANCE
 
-        # Calculate Kalman Gain
-        # gain[0] = (phi[0][0] * pestp[0][0] + phi[0][1] * pestp[1][0] + phi[0][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
-        # gain[1] = (phi[1][0] * pestp[0][0] + phi[1][1] * pestp[1][0] + phi[1][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
-        # gain[2] = (phi[2][0] * pestp[0][0] + phi[2][1] * pestp[1][0] + phi[2][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
-
         # Update state and state covariance
         est[0] = estp[0] + gain[0] * (pressure - estp[0])
         est[1] = estp[1] + gain[1] * (pressure - estp[0])
@@ -107,11 +101,9 @@ def main(altitude=False):
         # Store time and velocity for plotting
         times.append(time)
         velocities.append(est[1])
-        pressures.append(pressure)  # Store pressure for plotting
-        estimated_pressures.append(est[0])  # Store estimated pressure for plotting
+        pressures.append(pressure) 
+        estimated_pressures.append(est[0]) 
 
-        # Output
-        # print(f"Time: {time}, Pressure: {pressure}, Velocity: {est[1]}")
         if liftoff == 0:
             if est[1] < -5.0:
                 liftoff = 1
@@ -120,9 +112,8 @@ def main(altitude=False):
         else:
             if est[1] > 0 and not apogee:
                 print(f"Apogee detected at time: {time}")
-                apogee_time = time  # Store the time of apogee detection
+                apogee_time = time 
                 apogee = 1
-                # sys.exit(0)
 
         last_time = time
 
