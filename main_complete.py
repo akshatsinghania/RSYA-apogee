@@ -110,7 +110,7 @@ def main():
                 liftoff_time=time
                 print(f"Liftoff detected at time: {time}")
         else:
-            if est[1] > 0 and not apogee:
+            if est[1] > 3 and not apogee:
                 print(f"Apogee detected at time: {time}")
                 apogee_time = time 
                 apogee = 1
