@@ -9,35 +9,39 @@ MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
 MODELVARIANCE = MODELSIGMA * MODELSIGMA
 
 def main(altitude=False):
-    params = [ 1.13027517e-03,  4.86945337e-03 ,-3.52958599e-05]
-    pest = [[params[0], 0, 0], [0, params[1], 0], [0, 0, params[2]]]
-    gain = [0, 0, 0]
-
-
+    MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
+    MODELVARIANCE = MODELSIGMA * MODELSIGMA
     liftoff = 0
-    liftoff_time = None
     apogee=0
     est = [0.0, 0.0, 0.0]
     estp = [0.0, 0.0, 0.0]
-    # pest = [[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
+    pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
     pestp = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     phi = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
     phit = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
-    # gain = [ 0.010317, 0.010666, 0.004522 ]
-    
+    gain=[ 0.010317, 0.010666, 0.004522 ]
+   
     data = []
     with open('data.csv', newline='') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
-            if not row[0].startswith('#'):  # Ignore lines starting with '#'
+            if not row[0].startswith('#'):
                 data.append(row)
-    data = [[float(x) for x in row] for row in data[1:]]
+    data = [[float(x) for x in row] for row in data]
+    data = [[float(x[0]), 5000 - float(x[1])] for x in data]
 
-    time,  pressure = map(float, data[1])
-    if altitude:
-        pressure=5000-pressure
+    time,  pressure = map(float, data[0])
+
     est[0] = pressure
     last_time=0
+
+    dt = time - last_time
+    phi[0][1] = dt
+    phi[1][2] = dt
+    phi[0][2] = dt * dt / 2.0
+    phit[1][0] = dt
+    phit[2][1] = dt
+    phit[2][0] = dt * dt / 2.0
     
     velocities = []  # List to store velocities
     times = []       # List to store corresponding times
@@ -45,25 +49,18 @@ def main(altitude=False):
     pressures = []  # List to store pressures
     estimated_pressures = []  # List to store estimated pressures
 
-    for row in data[2:]:
+    for row in data:
         time,  pressure = map(float, row)
-        if last_time >= time:
-            sys.stderr.write("Time does not increase.\n")
+        if not math.isclose(time-last_time, dt, rel_tol=1e-9):
+            print("diff=",time-last_time,"  dt=",dt, "  time=",time,"  last_time=",last_time)
+            sys.stderr.write("change in time is not constant")
             sys.exit(1)
         
-        dt = time - last_time
-        last_time = time
-        phi[0][1] = dt
-        phi[1][2] = dt
-        phi[0][2] = dt * dt / 2.0
-        phit[1][0] = dt
-        phit[2][1] = dt
-        phit[2][0] = dt * dt / 2.0
 
         # Propagate state
-        estp[0] = phi[0][0] * est[0] + phi[0][1] * est[1] + phi[0][2] * est[2]
-        estp[1] = phi[1][0] * est[0] + phi[1][1] * est[1] + phi[1][2] * est[2]
-        estp[2] = phi[2][0] * est[0] + phi[2][1] * est[1] + phi[2][2] * est[2]
+        estp[0] = est[0]    +   est[1]*dt   +   est[2]*dt*dt/2.0;
+        estp[1] =               est[1]      +   est[2]*dt
+        estp[2] =                               est[2]
 
         # Propagate state covariance
         term = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
@@ -89,9 +86,9 @@ def main(altitude=False):
         pestp[0][0] += MODELVARIANCE
 
         # Calculate Kalman Gain
-        gain[0] = (phi[0][0] * pestp[0][0] + phi[0][1] * pestp[1][0] + phi[0][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
-        gain[1] = (phi[1][0] * pestp[0][0] + phi[1][1] * pestp[1][0] + phi[1][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
-        gain[2] = (phi[2][0] * pestp[0][0] + phi[2][1] * pestp[1][0] + phi[2][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
+        # gain[0] = (phi[0][0] * pestp[0][0] + phi[0][1] * pestp[1][0] + phi[0][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
+        # gain[1] = (phi[1][0] * pestp[0][0] + phi[1][1] * pestp[1][0] + phi[1][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
+        # gain[2] = (phi[2][0] * pestp[0][0] + phi[2][1] * pestp[1][0] + phi[2][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
 
         # Update state and state covariance
         est[0] = estp[0] + gain[0] * (pressure - estp[0])

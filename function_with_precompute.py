@@ -104,7 +104,7 @@ def main(pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]], gain=[ 0.010317, 0.
         last_time = time
 
    
-params = [ 1.13027517e-03,  4.86945337e-03 ,-3.52958599e-05]
+params = [ 0.00277289 -0.00016268  0.00069248]
 pest = [[params[0], 0, 0], [0, params[1], 0], [0, 0, params[2]]]
 gain = [0, 0, 0]
 print(main(pest,gain))

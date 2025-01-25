@@ -4,13 +4,14 @@ import sys
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
-def main(pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]], gain=[ 0.010317, 0.010666, 0.004522 ],MEASUREMENTSIGMA = 0.44,MODELSIGMA = 0.002):
+def main(gain=[ 0.010317, 0.010666, 0.004522 ],MEASUREMENTSIGMA = 0.44,MODELSIGMA = 0.002):
     MEASUREMENTVARIANCE = MEASUREMENTSIGMA * MEASUREMENTSIGMA
     MODELVARIANCE = MODELSIGMA * MODELSIGMA
     liftoff = 0
     apogee=0
     est = [0.0, 0.0, 0.0]
     estp = [0.0, 0.0, 0.0]
+    pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]]
     pestp = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     phi = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
     phit = [[1, 0, 0], [0, 1, 0], [0, 0, 1.0]]
@@ -19,34 +20,38 @@ def main(pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]], gain=[ 0.010317, 0.
     with open('data.csv', newline='') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
-            if not row[0].startswith('#'):  # Ignore lines starting with '#'
+            if not row[0].startswith('#'):
                 data.append(row)
-    data = [[float(x) for x in row] for row in data[1:]]
+    data = [[float(x) for x in row] for row in data]
+    data = [[float(x[0]), 5000 - float(x[1])] for x in data]
 
-    time,  pressure = map(float, data[1])
-    pressure=5000-pressure
+    time,  pressure = map(float, data[0])
+
+
     est[0] = pressure
     last_time=0
 
-    for row in data[2:]:
+    dt = time - last_time
+    last_time = time
+    phi[0][1] = dt
+    phi[1][2] = dt
+    phi[0][2] = dt * dt / 2.0
+    phit[1][0] = dt
+    phit[2][1] = dt
+    phit[2][0] = dt * dt / 2.0
+
+    for row in data:
         time,  pressure = map(float, row)
-        if last_time >= time:
-            sys.stderr.write("Time does not increase.\n")
+        if time-last_time!=dt:
+            sys.stderr.write("change in time is not constant")
             sys.exit(1)
         
-        dt = time - last_time
-        last_time = time
-        phi[0][1] = dt
-        phi[1][2] = dt
-        phi[0][2] = dt * dt / 2.0
-        phit[1][0] = dt
-        phit[2][1] = dt
-        phit[2][0] = dt * dt / 2.0
 
         # Propagate state
-        estp[0] = phi[0][0] * est[0] + phi[0][1] * est[1] + phi[0][2] * est[2]
-        estp[1] = phi[1][0] * est[0] + phi[1][1] * est[1] + phi[1][2] * est[2]
-        estp[2] = phi[2][0] * est[0] + phi[2][1] * est[1] + phi[2][2] * est[2]
+        estp[0] = est[0]    +   est[1]*dt   +   est[2]*dt*dt/2.0;
+        estp[1] =               est[1]      +   est[2]*dt
+        estp[2] =                               est[2]
+
 
         # Propagate state covariance
         term = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
@@ -72,9 +77,9 @@ def main(pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]], gain=[ 0.010317, 0.
         pestp[0][0] += MODELVARIANCE
 
         # Calculate Kalman Gain
-        gain[0] = (phi[0][0] * pestp[0][0] + phi[0][1] * pestp[1][0] + phi[0][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
-        gain[1] = (phi[1][0] * pestp[0][0] + phi[1][1] * pestp[1][0] + phi[1][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
-        gain[2] = (phi[2][0] * pestp[0][0] + phi[2][1] * pestp[1][0] + phi[2][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
+        # gain[0] = (phi[0][0] * pestp[0][0] + phi[0][1] * pestp[1][0] + phi[0][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
+        # gain[1] = (phi[1][0] * pestp[0][0] + phi[1][1] * pestp[1][0] + phi[1][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
+        # gain[2] = (phi[2][0] * pestp[0][0] + phi[2][1] * pestp[1][0] + phi[2][2] * pestp[2][0]) / (pestp[0][0] + MEASUREMENTVARIANCE)
 
         # Update state and state covariance
         est[0] = estp[0] + gain[0] * (pressure - estp[0])
@@ -101,9 +106,8 @@ def main(pest=[[0.002, 0, 0], [0, 0.004, 0], [0, 0, 0.002]], gain=[ 0.010317, 0.
         last_time = time
 
 def objective_function(params, expected_value):
-    pest = [[params[0], 0, 0], [0, params[1], 0], [0, 0, params[2]]]
-    gain = [0, 0, 0]
-    result = main(pest, gain)
+    gain = [params[0], params[1], params[2]]
+    result = main(gain)
     if result is None:
         return float('inf')  # Penalize if no result
     return abs(result - expected_value)
@@ -113,8 +117,8 @@ import numpy as np
 
 def optimize_parameters(expected_value):
     # Define the initial guess and bounds
-    initial_guess = [0.002, 0.004, 0.002]
-    bounds = [(0.001, 0.01), (0.001, 0.01), (0.001, 0.01)]
+    initial_guess = [0.010317, 0.010666, 0.004522]
+    bounds = [(0.001, 0.01), (0.001, 0.01), (0.001, 0.01), (0.001, 0.01), (0.001, 0.01), (0.001, 0.01)]
 
     # Dictionary to store results from various optimization methods
     optimization_results = {}
@@ -158,6 +162,6 @@ def optimize_parameters(expected_value):
 
 
 # Example usage
-expected_apogee_time = 8  # Replace with your expected value
+expected_apogee_time = 16  # Replace with your expected value
 optimal_params = optimize_parameters(expected_apogee_time)
 print(f"Optimal Parameters: {optimal_params}")
