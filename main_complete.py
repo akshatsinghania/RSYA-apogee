@@ -103,14 +103,14 @@ def main():
         velocities.append(est[1])
         pressures.append(pressure) 
         estimated_pressures.append(est[0]) 
-
+        print(est[1])
         if liftoff == 0:
             if est[1] < -5.0:
                 liftoff = 1
                 liftoff_time=time
                 print(f"Liftoff detected at time: {time}")
         else:
-            if est[1] > 3 and not apogee:
+            if est[1] > 0 and not apogee:
                 print(f"Apogee detected at time: {time}")
                 apogee_time = time 
                 apogee = 1
@@ -151,5 +151,4 @@ def main():
     plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    main(altitude=True)
+main()
